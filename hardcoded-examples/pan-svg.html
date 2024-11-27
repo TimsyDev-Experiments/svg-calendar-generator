@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Pan with Drag</title>
+    <style>
+        svg {
+            border: 1px solid black;
+            cursor: grab;
+        }
+
+        svg:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body>
+<svg id="mySvg" width="400" height="400" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="50" height="50" fill="blue"/>
+    <rect x="70" y="10" width="50" height="50" fill="red"/>
+    <rect x="10" y="70" width="50" height="50" fill="green"/>
+    <rect x="70" y="70" width="50" height="50" fill="yellow"/>
+</svg>
+
+<script>
+    const svg = document.getElementById('mySvg');
+    svg.setAttribute('viewBox', '0 0 400 400');
+    // let viewBox = svg.getAttribute('viewBox');
+    let viewBox = svg.viewBox.baseVal;
+    let defaultViewBox = {x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height};
+    let isPanning = false;
+    let startPoint = {x: 0, y: 0};
+
+    svg.addEventListener('mousedown', (event) => {
+        isPanning = true;
+        startPoint = {x: event.clientX, y: event.clientY};
+    });
+
+    document.addEventListener('mousemove', (event) => {
+        if (!isPanning) return;
+        const dx = (startPoint.x - event.clientX) * (viewBox.width / svg.clientWidth);
+        const dy = (startPoint.y - event.clientY) * (viewBox.height / svg.clientHeight);
+        viewBox.x += dx;
+        viewBox.y += dy;
+        startPoint = {x: event.clientX, y: event.clientY};
+        updateViewBox();
+    });
+
+    document.addEventListener('mouseup', () => {
+        isPanning = false;
+    });
+
+
+    svg.addEventListener('wheel', (event) => {
+        event.preventDefault();
+
+
+        const mousePos = getMousePosOnSvg(svg, event);
+        const scale = event.deltaY > 0 ? 1.1 : 0.9;
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+
+        viewBox.x = mousePos.x - (mousePos.x - viewBox.x) * (newWidth / viewBox.width);
+        viewBox.y = mousePos.y - (mousePos.y - viewBox.y) * (newHeight / viewBox.height);
+        viewBox.width = newWidth;
+        viewBox.height = newHeight;
+
+        updateViewBox();
+    })
+
+    svg.addEventListener('contextmenu', (event) => {
+        console.log('Returning to Default ViewBox');
+        console.log(event);
+        event.preventDefault();
+        // setDefaultViewBox();
+        console.log(`ViewBox: ${viewBox.x}, ${viewBox.y}, ${viewBox.width}, ${viewBox.height}`);
+    });
+
+function getMousePosOnSvg(selectedSvg, event) {
+    const point = svg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+
+    const svgPoint = point.matrixTransform(selectedSvg.getScreenCTM().inverse());
+    const svgX = viewBox.x + (svgPoint.x * viewBox.width / svg.clientWidth);
+    const svgY = viewBox.y + (svgPoint.y * viewBox.height / svg.clientHeight);
+
+    return {x: svgX, y: svgY};
+}
+
+    function updateViewBox() {
+        svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+    }
+
+    function setDefaultViewBox() {
+        svg.setAttribute('viewBox', `${defaultViewBox.x} ${defaultViewBox.y} ${defaultViewBox.width} ${defaultViewBox.height}`);
+    }
+
+</script>
+</body>
+</html>
